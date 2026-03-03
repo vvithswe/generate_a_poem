@@ -1,110 +1,117 @@
-{
-  "rules": [
-    {
-      "name": "INTG – Auto close sprint, create next, carry over incomplete",
-      "description": "Every 2 weeks, Monday 05:00 CET: complete active INTG sprint, create a new 2-week sprint on board 342, move all incomplete issues into the new sprint.",
-      "enabled": true,
-      "ruleScope": {
-        "type": "PROJECT"
-      },
-      "projects": [],
-      "creator": {
-        "type": "USER"
-      },
-      "actors": [],
-      "trigger": {
-        "type": "ScheduledTrigger",
-        "schedule": {
-          "type": "CRON_EXPRESSION",
-          "cronExpression": "0 0 5 ? * MON/2 *",
-          "timeZone": "Europe/Stockholm",
-          "runOnlyIfIssuesFound": false
-        }
-      },
-      "components": [
-        {
-          "type": "IF",
-          "name": "If there is an active INTG sprint",
-          "conditions": [
-            {
-              "type": "jira.jql.condition",
-              "configuration": {
-                "jql": "project = INTG AND sprint in openSprints()",
-                "checkType": "EXISTS"
-              }
-            }
-          ],
-          "components": [
-            {
-              "type": "branch",
-              "name": "Complete active sprint",
-              "branchType": "related",
-              "branchConfiguration": {
-                "type": "jql",
-                "jql": "project = INTG AND sprint in openSprints()"
-              },
-              "components": [
-                {
-                  "type": "EDIT_SPRINT",
-                  "name": "Complete sprint",
-                  "configuration": {
-                    "sprint": "{{issue.sprint.id}}",
-                    "editType": "complete"
-                  }
-                }
-              ]
-            },
-            {
-              "type": "SEND_WEB_REQUEST",
-              "name": "Create new sprint via REST",
-              "configuration": {
-                "url": "https://polestarjira.atlassian.net/rest/agile/1.0/sprint",
-                "method": "POST",
-                "headers": [
-                  {
-                    "name": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": "{\n  \"name\": \"INTG Sprint {{now.plusWeeks(2).format(\"ww\")}}_{{now.plusWeeks(2).format(\"YYYY\")}}\",\n  \"originBoardId\": 342,\n  \"startDate\": \"{{now}}\",\n  \"endDate\": \"{{now.plusWeeks(2)}}\"\n}",
-                "webhookAuthentication": "AUTOMATION_USER",
-                "timeout": "30"
-              }
-            },
-            {
-              "type": "LOOKUP_ISSUES",
-              "name": "Lookup incomplete issues from last closed sprint",
-              "configuration": {
-                "jql": "project = INTG AND sprint in closedSprints() AND statusCategory != Done ORDER BY updated DESC"
-              }
-            },
-            {
-              "type": "branch",
-              "name": "Branch: Incomplete issues in last closed sprint",
-              "branchType": "related",
-              "branchConfiguration": {
-                "type": "jql",
-                "jql": "{{#lookupIssues.size}}project = INTG AND key in ({{#lookupIssues}}{{key}}{{^last}}, {{/last}}{{/lookupIssues}}){{/lookupIssues.size}}"
-              },
-              "components": [
-                {
-                  "type": "EDIT_ISSUE",
-                  "name": "Move incomplete issues to new sprint",
-                  "configuration": {
-                    "fields": {
-                      "customfield_10007": {
-                        "set": [
-                          "{{webResponse.body.id}}"
-                        ]
-                      }
-                    }
-                  }
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Birthday Verse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Infant:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Quicksand:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fdf6f0;--bg-soft:#fef9f5;--sakura:#f4b4b8;--sakura-deep:#e8909a;--petal:#fcdde2;--rose:#d4878f;--sage-soft:#c8dbc7;--lavender:#d8cfe8;--gold:#e2c585;--ink:#4a3f3a;--text:#5c4f48;--text-soft:#9b8d85;--white:#fffcfa;--border:rgba(244,180,184,0.35);--glow:rgba(244,180,184,0.15)}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Quicksand',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;position:relative}
+.sky-wash{position:fixed;inset:0;background:radial-gradient(ellipse at 25% 15%,rgba(211,228,245,0.5) 0%,transparent 55%),radial-gradient(ellipse at 75% 10%,rgba(216,207,232,0.4) 0%,transparent 50%),radial-gradient(ellipse at 50% 85%,rgba(200,219,199,0.3) 0%,transparent 50%),radial-gradient(ellipse at 15% 70%,rgba(252,221,226,0.3) 0%,transparent 45%),linear-gradient(170deg,#fdf6f0 0%,#fef2ee 40%,#f9f0f5 70%,#f5f0f8 100%);pointer-events:none;z-index:0}
+.petals{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+.petal{position:absolute;top:-20px;opacity:0;animation:fall linear infinite}
+.petal svg{filter:drop-shadow(0 1px 2px rgba(244,180,184,0.2))}
+@keyframes fall{0%{opacity:0;transform:translateY(-20px) rotate(0deg) translateX(0)}8%{opacity:.7}85%{opacity:.5}100%{opacity:0;transform:translateY(105vh) rotate(360deg) translateX(80px)}}
+.page{position:relative;z-index:2;max-width:520px;margin:0 auto;padding:52px 24px 80px}
+.header{text-align:center;margin-bottom:44px;animation:softAppear 1s ease-out}
+@keyframes softAppear{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+.header-icon{font-size:28px;margin-bottom:12px;animation:gentleBob 3s ease-in-out infinite}
+@keyframes gentleBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.header h1{font-family:'Cormorant Infant',serif;font-size:clamp(2.4rem,7vw,3.2rem);font-weight:300;color:var(--ink);line-height:1.15}
+.header h1 em{font-style:italic;font-weight:400;color:var(--sakura-deep)}
+.header-sub{margin-top:12px;font-size:14px;color:var(--text-soft);font-weight:400;line-height:1.6}
+.branch-divider{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:20px;color:var(--sakura);font-size:11px;letter-spacing:4px;opacity:.6}
+.branch-divider::before,.branch-divider::after{content:'';width:32px;height:1px;background:linear-gradient(90deg,transparent,var(--sakura),transparent)}
+.card{background:var(--white);border:1px solid var(--border);border-radius:20px;padding:36px 30px 30px;box-shadow:0 2px 8px rgba(244,180,184,0.08),0 12px 40px rgba(244,180,184,0.06);animation:floatUp .8s ease-out .2s both;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--sage-soft),var(--sakura),var(--lavender),rgba(211,228,245,0.7));opacity:.7}
+@keyframes floatUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.field{margin-bottom:24px}
+.field:last-of-type{margin-bottom:28px}
+label{display:block;font-family:'Cormorant Infant',serif;font-size:16px;font-weight:500;color:var(--ink);margin-bottom:8px}
+label .hint{display:block;font-family:'Quicksand',sans-serif;font-size:12px;font-weight:400;color:var(--text-soft);margin-top:3px}
+input[type="text"],textarea{width:100%;background:var(--bg-soft);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;font-family:'Quicksand',sans-serif;font-size:14.5px;font-weight:400;color:var(--text);transition:all .3s ease;outline:none}
+input::placeholder,textarea::placeholder{color:var(--text-soft);opacity:.55;font-weight:300}
+input:focus,textarea:focus{border-color:var(--sakura);background:var(--white);box-shadow:0 0 0 4px var(--glow)}
+textarea{min-height:110px;resize:vertical;line-height:1.7}
+.btn-find{width:100%;padding:15px 24px;background:linear-gradient(135deg,var(--sakura),var(--sakura-deep));border:none;border-radius:14px;font-family:'Quicksand',sans-serif;font-size:14px;font-weight:600;letter-spacing:1px;color:var(--white);cursor:pointer;transition:all .35s ease;position:relative;overflow:hidden}
+.btn-find::before{content:'';position:absolute;top:50%;left:50%;width:0;height:0;background:rgba(255,255,255,0.15);border-radius:50%;transform:translate(-50%,-50%);transition:width .5s ease,height .5s ease}
+.btn-find:hover::before{width:300px;height:300px}
+.btn-find:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(232,144,154,0.3)}
+.btn-find:active{transform:translateY(0)}
+.result{display:none;margin-top:36px;animation:floatUp .7s ease-out}
+.result.active{display:block}
+.verse-card{background:var(--white);border:1px solid var(--border);border-radius:20px;padding:40px 32px;position:relative;overflow:hidden;box-shadow:0 2px 8px rgba(244,180,184,0.08),0 16px 48px rgba(244,180,184,0.08)}
+.verse-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--sage-soft),var(--sakura),var(--lavender));opacity:.6}
+.verse-card::after{content:'\201C';position:absolute;top:12px;left:20px;font-family:'Cormorant Infant',serif;font-size:80px;color:var(--petal);line-height:1;pointer-events:none}
+.verse-for{font-family:'Quicksand',sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--sakura-deep);font-weight:600;margin-bottom:20px;position:relative}
+.verse-text{font-family:'Cormorant Infant',serif;font-size:clamp(1.15rem,2.8vw,1.4rem);line-height:1.95;color:var(--ink);font-weight:400;white-space:pre-line;margin-bottom:24px;position:relative}
+.verse-source{font-size:13px;color:var(--text-soft);font-style:italic;padding-top:18px;border-top:1px solid var(--border);position:relative}
+.verse-source strong{color:var(--rose);font-weight:600;font-style:normal}
+.verse-why{margin-top:14px;font-size:13px;color:var(--text-soft);line-height:1.7;position:relative}
+.result-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+.btn-soft{font-family:'Quicksand',sans-serif;font-size:12px;font-weight:600;letter-spacing:.8px;padding:10px 20px;border-radius:10px;border:1.5px solid var(--border);background:var(--white);color:var(--text);cursor:pointer;transition:all .25s ease}
+.btn-soft:hover{border-color:var(--sakura);color:var(--sakura-deep);background:var(--glow)}
+.sparkle{position:absolute;width:4px;height:4px;background:var(--gold);border-radius:50%;opacity:0;animation:twinkle 3s ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:0;transform:scale(.5)}50%{opacity:.6;transform:scale(1)}}
+.footer{text-align:center;margin-top:48px;font-size:11px;color:var(--text-soft);opacity:.45}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+@media(max-width:560px){.page{padding:36px 16px 60px}.card{padding:28px 20px 24px}.verse-card{padding:32px 22px}}
+</style>
+</head>
+<body>
+<div class="sky-wash"></div>
+<div class="petals" id="petals"></div>
+<div class="page">
+  <header class="header">
+    <div class="header-icon">&#127800;</div>
+    <h1>Birthday <em>Verse</em></h1>
+    <p class="header-sub">Tell us about your favourite person &mdash; we&rsquo;ll find a poem that feels like them.</p>
+    <div class="branch-divider">&#10043;</div>
+  </header>
+  <div class="card" id="formCard">
+    <div class="field">
+      <label>Their name<span class="hint">The birthday star</span></label>
+      <input type="text" id="nameInput" placeholder="e.g. Sofia" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Describe your favourite person<span class="hint">What makes them special? What do you love about them?</span></label>
+      <textarea id="personalityInput" placeholder="e.g. She lights up every room, loves rainy afternoons with tea and a good book, always knows the right thing to say, laughs at her own jokes..."></textarea>
+    </div>
+    <button class="btn-find" onclick="handleGenerate()">&#10024; Find their verse</button>
+  </div>
+  <div class="result" id="result">
+    <div class="verse-card" id="verseCard">
+      <div class="verse-for" id="verseFor"></div>
+      <div class="verse-text" id="verseText"></div>
+      <div class="verse-source" id="verseSource"></div>
+      <div class="verse-why" id="verseWhy"></div>
+    </div>
+    <div class="result-actions">
+      <button class="btn-soft" onclick="copyVerse()">Copy</button>
+      <button class="btn-soft" onclick="tryAnother()">Try another</button>
+      <button class="btn-soft" onclick="startOver()">Start over</button>
+    </div>
+  </div>
+  <footer class="footer">crafted with poetry &amp; petals</footer>
+</div>
+<script>
+(function(){var c=document.getElementById('petals');var cols=['#f4b4b8','#fcdde2','#f5d6d0','#f0c4cb','#e8b4bc'];for(var i=0;i<18;i++){var p=document.createElement('div');p.className='petal';p.style.left=(Math.random()*100)+'%';p.style.animationDuration=(8+Math.random()*10)+'s';p.style.animationDelay=(Math.random()*12)+'s';var sz=10+Math.random()*10,cl=cols[Math.floor(Math.random()*cols.length)],rot=Math.random()*360;p.innerHTML='<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 20 20" style="transform:rotate('+rot+'deg)"><ellipse cx="10" cy="8" rx="5" ry="8" fill="'+cl+'" opacity="0.7"/><ellipse cx="8" cy="10" rx="4" ry="6" fill="'+cl+'" opacity="0.5" transform="rotate(-30 10 10)"/></svg>';c.appendChild(p);}})();
+function addSparkles(el){for(var i=0;i<5;i++){var s=document.createElement('div');s.className='sparkle';s.style.top=(10+Math.random()*80)+'%';s.style.left=(5+Math.random()*90)+'%';s.style.animationDelay=(Math.random()*3)+'s';s.style.width=s.style.height=(2+Math.random()*3)+'px';el.appendChild(s);}}
+var poems=[{"v": "Shall I compare thee to a summer’s day?\nThou art more lovely and more temperate.\nRough winds do shake the darling buds of May,\nAnd summer’s lease hath all too short a date.", "p": "William Shakespeare", "t": "Sonnet 18", "k": ["beautiful", "lovely", "warm", "gentle", "radiant", "graceful", "elegant", "bright", "sunshine", "summer", "stunning", "charming", "gorgeous", "pretty"], "n": "Shakespeare wrote these lines to immortalise someone whose warmth outshines even summer — just like {name}."}, {"v": "Love is not love\nWhich alters when it alteration finds,\nOr bends with the remover to remove.\nO no, it is an ever-fixed mark\nThat looks on tempests and is never shaken.", "p": "William Shakespeare", "t": "Sonnet 116", "k": ["steady", "constant", "loyal", "faithful", "unwavering", "reliable", "dependable", "rock", "anchor", "devoted", "committed", "true", "trustworthy", "solid"], "n": "Shakespeare described a love that never wavers — the same steady spirit that defines {name}."}, {"v": "I do not love you as if you were salt-rose, or topaz,\nor the arrow of carnations the fire shoots off.\nI love you as certain dark things are to be loved,\nin secret, between the shadow and the soul.", "p": "Pablo Neruda", "t": "Sonnet XVII", "k": ["deep", "soulful", "mysterious", "quiet", "thoughtful", "introspective", "intense", "passionate", "profound", "complex", "sensitive", "wise", "reflective"], "n": "Neruda’s words mirror the quiet intensity {name} carries — someone whose presence lingers long after they leave."}, {"v": "I want to do with you what spring does with the cherry trees.", "p": "Pablo Neruda", "t": "Every Day You Play", "k": ["joyful", "playful", "alive", "vibrant", "spontaneous", "free", "fun", "adventurous", "lively", "spirited", "energetic", "cheerful", "happy", "wild", "spring", "blossoming"], "n": "One line is all Neruda needed to capture something bursting with life — the same energy {name} brings into every room."}, {"v": "How do I love thee? Let me count the ways.\nI love thee to the depth and breadth and height\nMy soul can reach, when feeling out of sight\nFor the ends of being and ideal grace.", "p": "Elizabeth Barrett Browning", "t": "Sonnet 43", "k": ["devoted", "loving", "deep", "soulful", "romantic", "passionate", "faithful", "adoring", "endless", "boundless", "infinite", "wholehearted", "complete"], "n": "Browning counted the infinite ways of love — and anyone who knows {name} could write their own endless list."}, {"v": "If thou must love me, let it be for nought\nExcept for love’s sake only.", "p": "Elizabeth Barrett Browning", "t": "Sonnet XIV", "k": ["authentic", "genuine", "real", "true", "sincere", "honest", "pure", "unconditional", "accepting", "soul", "essence", "inner beauty", "depth"], "n": "Browning asked to be loved for something eternal — and {name} is someone loved for who they truly are."}, {"v": "If I can stop one heart from breaking,\nI shall not live in vain;\nIf I can ease one life the aching,\nOr cool one pain,\nOr help one fainting robin\nUnto his nest again,\nI shall not live in vain.", "p": "Emily Dickinson", "t": "If I Can Stop One Heart from Breaking", "k": ["kind", "caring", "compassionate", "generous", "selfless", "helper", "nurturing", "empathetic", "healer", "giving", "tender", "supportive", "loving"], "n": "Dickinson celebrated the quiet heroism of kindness — the very thing that defines {name}."}, {"v": "To see a World in a Grain of Sand\nAnd a Heaven in a Wild Flower,\nHold Infinity in the palm of your hand\nAnd Eternity in an hour.", "p": "William Blake", "t": "Auguries of Innocence", "k": ["wonder", "curious", "imaginative", "dreamer", "creative", "magical", "whimsical", "childlike", "open", "spiritual", "visionary", "artistic", "mindful", "observant"], "n": "Blake saw magic in the smallest things — and so does {name}."}, {"v": "If you are seeking, seek us with joy\nFor we live in the kingdom of joy.\nDo not give your heart to anything else\nBut to the love of those who are clear joy.\nFor there are hopes: they are real, they exist —\nI tell you: suns exist.", "p": "Rumi", "t": "Seek Us With Joy", "k": ["joyful", "hopeful", "optimistic", "radiant", "sunny", "cheerful", "positive", "uplifting", "encouraging", "light", "warm", "bright", "happy", "inspiring"], "n": "Rumi reminds us that joy is a home — and {name} has always lived there and invited everyone in."}, {"v": "When you do things from your soul,\nyou feel a river moving in you, a joy.", "p": "Rumi", "t": "When You Do Things from Your Soul", "k": ["passionate", "driven", "purposeful", "soulful", "creative", "authentic", "inspired", "flowing", "alive", "artist", "maker", "doer", "builder"], "n": "Rumi knew true joy comes from living with soul — and {name} does everything with quiet, radiant purpose."}, {"v": "Love is the bridge between you and everything.", "p": "Rumi", "t": "Love is the Bridge", "k": ["connector", "friend", "social", "community", "bridge", "together", "unity", "people", "warmth", "open", "welcoming", "inclusive", "hospitable"], "n": "Rumi’s words feel written for {name} — someone who is the bridge between hearts."}, {"v": "Your task is not to seek for love,\nbut merely to seek and find all the barriers\nwithin yourself that you have built against it.", "p": "Rumi", "t": "Your Task", "k": ["growth", "self-aware", "introspective", "evolving", "healing", "mindful", "meditation", "reflection", "journey", "transformation", "becoming"], "n": "Rumi spoke of the courage to look inward — and {name} has always had the bravery to grow and let love in."}, {"v": "This is how I would die\ninto the love I have for you:\nas pieces of cloud\ndissolve in sunlight.", "p": "Rumi", "t": "This Is How I Would Die", "k": ["devotion", "surrender", "tenderness", "gentle", "soft", "melting", "warmth", "light", "letting go", "peace", "trust", "faith"], "n": "Rumi described love as dissolving into light — the effortless warmth {name} radiates."}, {"v": "You are my wine, my joy,\nMy garden, my springtime,\nMy slumber, my repose,\nWithout you, I can’t cope.", "p": "Rumi", "t": "Love: The Joy That Wounds", "k": ["essential", "irreplaceable", "needed", "cherished", "treasured", "precious", "indispensable", "everything", "garden", "springtime", "comfort", "home"], "n": "Rumi captured needing someone the way earth needs spring — {name} is that person for so many."}, {"v": "Lose yourself,\nLose yourself in this love.\nWhen you lose yourself in this love,\nyou will find everything.", "p": "Rumi", "t": "Lose Yourself", "k": ["surrender", "abandon", "letting go", "freedom", "love", "transcendence", "liberation", "release", "trust", "falling", "leap", "embrace"], "n": "Rumi invites us to dissolve into love — and {name} makes that leap feel safe."}, {"v": "i carry your heart with me(i carry it in\nmy heart)i am never without it(anywhere\ni go you go,my dear;and whatever is done\nby only me is your doing,my darling)", "p": "E.E. Cummings", "t": "i carry your heart with me", "k": ["loving", "devoted", "loyal", "faithful", "romantic", "affectionate", "heart", "connection", "closeness", "partner", "beloved", "sweetheart", "warmhearted"], "n": "Cummings wrote about love that lives inside you permanently — the way {name} stays in every heart."}, {"v": "You do not have to be good.\nYou do not have to walk on your knees\nfor a hundred miles through the desert repenting.\nYou only have to let the soft animal of your body\nlove what it loves.", "p": "Mary Oliver", "t": "Wild Geese", "k": ["free", "authentic", "natural", "wild", "earthy", "honest", "real", "grounded", "unconventional", "independent", "free-spirited", "accepting", "peaceful", "calm"], "n": "Oliver gave the world permission to simply be — and {name} embodies that rare freedom."}, {"v": "Keep some room in your heart for the unimaginable.", "p": "Mary Oliver", "t": "Evidence", "k": ["hopeful", "optimistic", "open-minded", "possibility", "faith", "trust", "believing", "surprise", "unexpected", "open", "receptive", "welcoming"], "n": "Oliver’s gentle reminder is perfect for {name} — someone whose heart always has room for one more surprise."}, {"v": "Let us be grateful to people who make us happy;\nthey are the charming gardeners\nwho make our souls blossom.", "p": "Marcel Proust", "t": "In Search of Lost Time", "k": ["happy", "cheerful", "sunny", "uplifting", "positive", "light", "bright", "funny", "joyful", "delightful", "infectious", "bubbly", "warm", "friend", "grateful"], "n": "Proust knew the rarest gift is making others bloom — exactly what {name} does."}, {"v": "Two roads diverged in a wood, and I—\nI took the one less traveled by,\nAnd that has made all the difference.", "p": "Robert Frost", "t": "The Road Not Taken", "k": ["unique", "individual", "different", "original", "independent", "unconventional", "explorer", "curious", "bold", "journey", "wanderer", "maverick"], "n": "Frost celebrated choosing your own path — and {name} has never followed the crowd."}, {"v": "I have spread my dreams under your feet;\nTread softly because you tread on my dreams.", "p": "W.B. Yeats", "t": "Aedh Wishes for the Cloths of Heaven", "k": ["dreamer", "vulnerable", "tender", "poetic", "romantic", "delicate", "soft", "trusting", "hopeful", "idealist", "gentle", "dream", "wishing", "ethereal"], "n": "Yeats laid his dreams bare with tenderness — the same gentle courage {name} shows."}, {"v": "The world is full of magic things,\npatiently waiting for our senses to grow sharper.", "p": "W.B. Yeats", "t": "attributed", "k": ["magic", "wonder", "curious", "perceptive", "awakening", "aware", "attentive", "noticing", "patient", "discovering", "enchanted", "fascinated"], "n": "Yeats reminds us magic is always there — and {name}’s senses have always been beautifully sharp."}, {"v": "There is a crack in everything.\nThat’s how the light gets in.", "p": "Leonard Cohen", "t": "Anthem", "k": ["imperfect", "real", "honest", "healing", "light", "hope", "redemption", "acceptance", "human", "flawed", "authentic", "raw", "resilient"], "n": "Cohen found beauty in the broken places — and {name} lets light through every crack."}, {"v": "The most beautiful things in the world cannot be seen or even touched.\nThey must be felt with the heart.", "p": "Antoine de Saint-Exupéry", "t": "The Little Prince", "k": ["heart", "feeling", "emotional", "intuitive", "sensitive", "empathetic", "perceptive", "romantic", "tender", "soft", "gentle", "understanding", "insightful"], "n": "Saint-Exupéry understood that the truest things are invisible — and {name} sees with a heart so open it catches everything."}, {"v": "May your coming year be filled with magic\nand dreams and good madness.\nI hope you read some fine books and kiss someone\nwho thinks you’re wonderful.", "p": "Neil Gaiman", "t": "A New Year’s Wish", "k": ["magic", "dream", "dreamer", "whimsical", "reader", "bookworm", "literary", "romantic", "wonderful", "enchanting", "imaginative", "storyteller", "writer"], "n": "Gaiman’s wish for good madness is the perfect blessing for {name}."}, {"v": "My heart is like a singing bird\nWhose nest is in a water’d shoot;\nMy heart is like an apple-tree\nWhose boughs are bent with thickset fruit.", "p": "Christina Rossetti", "t": "A Birthday", "k": ["birthday", "celebrate", "celebration", "festive", "abundant", "full", "rich", "flourishing", "blooming", "fruitful", "singing", "musical", "creative", "expressive"], "n": "Rossetti wrote about a heart so full it overflows — that fullness is what everyone feels around {name}."}, {"v": "Happiness, not in another place but this place,\nnot for another hour, but this hour.", "p": "Walt Whitman", "t": "Song of Myself", "k": ["present", "mindful", "content", "grateful", "grounded", "balanced", "zen", "calm", "satisfied", "fulfilled", "serene", "relaxed"], "n": "Whitman celebrated being right here, right now — and {name} makes wherever they are feel like the right place."}, {"v": "What lies behind us and what lies before us\nare tiny matters compared to\nwhat lies within us.", "p": "Ralph Waldo Emerson", "t": "Self-Reliance", "k": ["inner strength", "character", "integrity", "values", "depth", "substance", "principled", "true", "authentic", "genuine", "real", "soul", "spirit"], "n": "Emerson knew what’s inside matters most — and what lies within {name} is extraordinary."}, {"v": "And the day came when the risk to remain tight in a bud\nwas more painful than the risk it took to blossom.", "p": "Anaïs Nin", "t": "Risk", "k": ["brave", "growth", "blossoming", "vulnerable", "courageous", "evolving", "changing", "transformation", "beginning", "fresh", "renewal", "bloom"], "n": "Nin captured the moment someone chooses to bloom — and {name} has blossomed into someone remarkable."}, {"v": "Out of the night that covers me,\nBlack as the pit from pole to pole,\nI thank whatever gods may be\nFor my unconquerable soul.", "p": "William Ernest Henley", "t": "Invictus", "k": ["strong", "resilient", "fighter", "survivor", "tough", "unbreakable", "determined", "persistent", "warrior", "enduring", "steadfast", "powerful", "unstoppable"], "n": "Henley wrote these words unbowed — they belong to {name}, whose strength is extraordinary."}, {"v": "Come to the edge.\nWe might fall.\nCome to the edge.\nIt’s too high!\nCome to the edge!\nAnd they came,\nand he pushed,\nand they flew.", "p": "Christopher Logue", "t": "Come to the Edge", "k": ["brave", "courageous", "bold", "fearless", "daring", "risk-taker", "leader", "trailblazer", "pioneer", "determined", "fierce", "confident", "adventurous"], "n": "This verse is for the ones who leap — and {name} always finds their wings."}, {"v": "I am not afraid of storms,\nfor I am learning how to sail my ship.", "p": "Louisa May Alcott", "t": "Little Women", "k": ["learning", "growing", "student", "determined", "persevering", "capable", "resourceful", "adaptive", "clever", "smart", "resilient", "steady", "practical"], "n": "{name} doesn’t just weather storms — they learn to dance in the rain."}, {"v": "For whatever we lose (like a you or a me),\nIt’s always our self we find in the sea.", "p": "E.E. Cummings", "t": "maggie and milly and molly and may", "k": ["ocean", "sea", "water", "self-discovery", "searching", "finding", "journey", "explorer", "traveller", "wanderlust", "beach", "waves", "depth"], "n": "Cummings knew the sea gives back what the world takes — and {name} helps people find themselves again."}, {"v": "And think not you can direct the course of love,\nfor love, if it finds you worthy, directs your course.", "p": "Kahlil Gibran", "t": "The Prophet", "k": ["wise", "philosophical", "thinker", "deep", "spiritual", "old soul", "sage", "knowing", "understanding", "accepting", "flow", "surrender", "trust"], "n": "Gibran wrote about letting love lead — and {name} has the wisdom to trust the current."}, {"v": "Your children are not your children.\nThey are the sons and daughters of Life’s longing for itself.\nThey come through you but not from you.", "p": "Kahlil Gibran", "t": "On Children", "k": ["parent", "mother", "father", "family", "children", "nurturing", "letting go", "freedom", "life", "parenting", "guardian", "protector"], "n": "Gibran honours the most generous love — the kind {name} gives: holding close while letting free."}, {"v": "If ever two were one, then surely we.\nIf ever man were lov’d by wife, then thee.", "p": "Anne Bradstreet", "t": "To My Dear and Loving Husband", "k": ["marriage", "spouse", "husband", "wife", "partner", "soulmate", "devotion", "union", "together", "partnership", "bond", "commitment", "vow"], "n": "Bradstreet’s declaration still feels alive — the wholehearted devotion {name} inspires."}, {"v": "O my Luve is like a red, red rose\nThat’s newly sprung in June;\nO my Luve is like the melody\nThat’s sweetly played in tune.", "p": "Robert Burns", "t": "A Red, Red Rose", "k": ["romantic", "passionate", "classic", "timeless", "rose", "flower", "melody", "music", "sweet", "beautiful", "love", "beloved", "devotion", "adoration"], "n": "Burns gave the world one of its most tender declarations — and {name} deserves every word."}, {"v": "A thing of beauty is a joy forever:\nIts loveliness increases; it will never\nPass into nothingness.", "p": "John Keats", "t": "Endymion", "k": ["beautiful", "timeless", "eternal", "lasting", "enduring", "ageless", "classic", "grace", "loveliness", "permanence", "art", "beauty", "forever", "joy"], "n": "Keats knew true beauty only grows — and {name} is proof, more radiant with every passing year."}, {"v": "What is life?\nIt is the flash of a firefly in the night.\nIt is the breath of a buffalo in the wintertime.\nIt is the little shadow which runs across the grass\nand loses itself in the sunset.", "p": "Crowfoot", "t": "Last Words", "k": ["nature", "peaceful", "serene", "gentle", "quiet", "still", "contemplative", "mindful", "present", "precious", "simple", "humble", "earth", "grounded", "outdoors"], "n": "These words remind us how precious every moment is — and {name} understands the beauty in life’s quiet wonders."}];
+var usedIndices=[];
+function scorePoem(poem,text){var score=0,lower=text.toLowerCase();for(var i=0;i<poem.k.length;i++){var kw=poem.k[i];if(lower.indexOf(kw)!==-1){score+=10;continue;}var stem=kw.substring(0,Math.min(kw.length,4));if(stem.length>=3&&lower.indexOf(stem)!==-1)score+=4;}var stems=["laugh","joy","kind","gentle","brave","strong","quiet","bright","warm","love","nature","book","read","star","dream","creat","art","music","sing","danc","ocean","sea","travel","adventur","peace","calm","fun","play","free","grow","learn","wise","deep","heart","soul","spirit","magic","hope","beaut","happy","cheer","friend","loyal","honest","wild","tender","light","rain","tea","funny","smart","silly","sweet","cozy","wonder","bloom","garden","home","comfort","famil","mother","father","child","husband","wife","partner","steady","rock","faith"];for(var i=0;i<stems.length;i++){if(lower.indexOf(stems[i])!==-1){for(var j=0;j<poem.k.length;j++){if(poem.k[j].indexOf(stems[i])!==-1){score+=3;break;}}}}return score;}
+function findBestPoem(text){var scored=[];for(var i=0;i<poems.length;i++)scored.push({poem:poems[i],idx:i,score:scorePoem(poems[i],text)});scored.sort(function(a,b){return b.score-a.score;});for(var m=0;m<scored.length;m++){if(usedIndices.indexOf(scored[m].idx)===-1){usedIndices.push(scored[m].idx);if(usedIndices.length>Math.floor(poems.length/2))usedIndices=[scored[m].idx];return scored[m].poem;}}usedIndices=[scored[0].idx];return scored[0].poem;}
+function esc(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML;}
+function handleGenerate(){var name=document.getElementById("nameInput").value.trim();var desc=document.getElementById("personalityInput").value.trim();if(!name){var el=document.getElementById("nameInput");el.style.animation="none";el.offsetHeight;el.style.animation="shake 0.4s ease";el.focus();return;}var match=findBestPoem(name+" "+desc);document.getElementById("verseFor").textContent="For "+name;document.getElementById("verseText").textContent=match.v;document.getElementById("verseSource").innerHTML="\u2014 <strong>"+esc(match.p)+"</strong>, \u201c"+esc(match.t)+"\u201d";document.getElementById("verseWhy").textContent=match.n.replace(/\{name\}/g,name);var vc=document.getElementById("verseCard");var old=vc.querySelectorAll(".sparkle");for(var i=0;i<old.length;i++)old[i].remove();addSparkles(vc);document.getElementById("formCard").style.display="none";var r=document.getElementById("result");r.classList.add("active");r.scrollIntoView({behavior:"smooth",block:"start"});}
+function tryAnother(){handleGenerate();}
+function copyVerse(){var t=document.getElementById("verseFor").textContent+"\n\n"+document.getElementById("verseText").textContent+"\n\n"+document.getElementById("verseSource").textContent;navigator.clipboard.writeText(t).then(function(){var btn=event.target;btn.textContent="Copied!";setTimeout(function(){btn.textContent="Copy";},1800);});}
+function startOver(){usedIndices=[];document.getElementById("result").classList.remove("active");document.getElementById("formCard").style.display="";document.getElementById("nameInput").value="";document.getElementById("personalityInput").value="";window.scrollTo({top:0,behavior:"smooth"});}
+
+</script>
+</body>
+</html>
