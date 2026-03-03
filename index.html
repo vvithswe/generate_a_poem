@@ -1,0 +1,110 @@
+{
+  "rules": [
+    {
+      "name": "INTG – Auto close sprint, create next, carry over incomplete",
+      "description": "Every 2 weeks, Monday 05:00 CET: complete active INTG sprint, create a new 2-week sprint on board 342, move all incomplete issues into the new sprint.",
+      "enabled": true,
+      "ruleScope": {
+        "type": "PROJECT"
+      },
+      "projects": [],
+      "creator": {
+        "type": "USER"
+      },
+      "actors": [],
+      "trigger": {
+        "type": "ScheduledTrigger",
+        "schedule": {
+          "type": "CRON_EXPRESSION",
+          "cronExpression": "0 0 5 ? * MON/2 *",
+          "timeZone": "Europe/Stockholm",
+          "runOnlyIfIssuesFound": false
+        }
+      },
+      "components": [
+        {
+          "type": "IF",
+          "name": "If there is an active INTG sprint",
+          "conditions": [
+            {
+              "type": "jira.jql.condition",
+              "configuration": {
+                "jql": "project = INTG AND sprint in openSprints()",
+                "checkType": "EXISTS"
+              }
+            }
+          ],
+          "components": [
+            {
+              "type": "branch",
+              "name": "Complete active sprint",
+              "branchType": "related",
+              "branchConfiguration": {
+                "type": "jql",
+                "jql": "project = INTG AND sprint in openSprints()"
+              },
+              "components": [
+                {
+                  "type": "EDIT_SPRINT",
+                  "name": "Complete sprint",
+                  "configuration": {
+                    "sprint": "{{issue.sprint.id}}",
+                    "editType": "complete"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "SEND_WEB_REQUEST",
+              "name": "Create new sprint via REST",
+              "configuration": {
+                "url": "https://polestarjira.atlassian.net/rest/agile/1.0/sprint",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": "{\n  \"name\": \"INTG Sprint {{now.plusWeeks(2).format(\"ww\")}}_{{now.plusWeeks(2).format(\"YYYY\")}}\",\n  \"originBoardId\": 342,\n  \"startDate\": \"{{now}}\",\n  \"endDate\": \"{{now.plusWeeks(2)}}\"\n}",
+                "webhookAuthentication": "AUTOMATION_USER",
+                "timeout": "30"
+              }
+            },
+            {
+              "type": "LOOKUP_ISSUES",
+              "name": "Lookup incomplete issues from last closed sprint",
+              "configuration": {
+                "jql": "project = INTG AND sprint in closedSprints() AND statusCategory != Done ORDER BY updated DESC"
+              }
+            },
+            {
+              "type": "branch",
+              "name": "Branch: Incomplete issues in last closed sprint",
+              "branchType": "related",
+              "branchConfiguration": {
+                "type": "jql",
+                "jql": "{{#lookupIssues.size}}project = INTG AND key in ({{#lookupIssues}}{{key}}{{^last}}, {{/last}}{{/lookupIssues}}){{/lookupIssues.size}}"
+              },
+              "components": [
+                {
+                  "type": "EDIT_ISSUE",
+                  "name": "Move incomplete issues to new sprint",
+                  "configuration": {
+                    "fields": {
+                      "customfield_10007": {
+                        "set": [
+                          "{{webResponse.body.id}}"
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
